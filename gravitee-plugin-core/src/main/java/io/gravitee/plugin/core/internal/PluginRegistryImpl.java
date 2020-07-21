@@ -141,15 +141,13 @@ public class PluginRegistryImpl extends AbstractService implements PluginRegistr
     }
 
     private void printPlugins() {
-        for (PluginType pluginType : PluginType.values()) {
-            printPluginByType(pluginType);
-        }
+        plugins.stream().map(Plugin::type).distinct().forEach(this::printPluginByType);
     }
 
-    private void printPluginByType(PluginType pluginType) {
-        LOGGER.info("List of available {}: ", pluginType.name().toLowerCase());
+    private void printPluginByType(String type) {
+        LOGGER.info("List of available {}: ", type.toLowerCase());
         plugins.stream()
-                .filter(plugin -> pluginType == plugin.type())
+                .filter(plugin -> type.equalsIgnoreCase(plugin.type()))
                 .forEach(plugin -> LOGGER.info("\t> {} [{}] has been loaded",
                         plugin.id(), plugin.manifest().version()));
     }
@@ -339,6 +337,14 @@ public class PluginRegistryImpl extends AbstractService implements PluginRegistr
         final String version = properties.getProperty(PluginManifestProperties.MANIFEST_VERSION_PROPERTY);
         final String type = properties.getProperty(PluginManifestProperties.MANIFEST_TYPE_PROPERTY);
 
+        final Map<String, String> propertiesMap = new HashMap<>();
+        properties.forEach((o, o2) -> {
+            String key = o.toString();
+            if (! PluginManifestProperties.MANIFEST_PROPERTIES.contains(key)) {
+                propertiesMap.put(o.toString(), o2.toString());
+            }
+        });
+
         return new PluginManifest() {
             @Override
             public String id() {
@@ -369,9 +375,15 @@ public class PluginRegistryImpl extends AbstractService implements PluginRegistr
             public String type() {
                 return type;
             }
+
+            @Override
+            public Map<String, String> properties() {
+                return propertiesMap;
+            }
         };
     }
 
+    /*
     private List<File> getPluginsArchive(String directory) {
         DirectoryStream.Filter<Path> filter = file -> (Files.isDirectory(file));
 
@@ -388,6 +400,7 @@ public class PluginRegistryImpl extends AbstractService implements PluginRegistr
 
         return files;
     }
+     */
 
     @Override
     public Collection<Plugin> plugins() {
@@ -395,9 +408,9 @@ public class PluginRegistryImpl extends AbstractService implements PluginRegistr
     }
 
     @Override
-    public Collection<Plugin> plugins(PluginType type) {
+    public Collection<Plugin> plugins(String type) {
         return plugins.stream()
-                .filter(pluginContext -> pluginContext.type() == type)
+                .filter(pluginContext -> type.equalsIgnoreCase(pluginContext.type()))
                 .collect(Collectors.toSet());
     }
 
